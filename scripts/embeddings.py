@@ -1,119 +1,50 @@
-# from langchain.schema import Document
-# from langchain.vectorstores import FAISS
-# from langchain.embeddings import HuggingFaceEmbeddings
-# from sentence_transformers import SentenceTransformer
-# import faiss
-# import numpy as np
-
-# class EmbeddingStore:
-#     def __init__(self, model_name="all-MiniLM-L6-v2"):
-#         self.model_name = model_name
-#         self.model = SentenceTransformer(model_name)
-#         self.index = None
-#         self.texts = []
-#         self.faiss_store = None
-
-#     def add_texts(self, texts):
-#         embeddings = self.model.encode(texts)
-#         self.texts.extend(texts)
-
-#         # Create or update FAISS index
-#         if self.index is None:
-#             dim = embeddings.shape[1]
-#             self.index = faiss.IndexFlatL2(dim)
-#         self.index.add(np.array(embeddings, dtype='float32'))
-
-#         # Wrap FAISS with LangChain retriever
-#         docs = [Document(page_content=t) for t in self.texts]
-#         hf_embeddings = HuggingFaceEmbeddings(model_name=self.model_name)
-#         self.faiss_store = FAISS.from_documents(docs, hf_embeddings)
-
-
-    
-#     # ✅ Add 'k' parameter here for top-k retrieval
-#     def as_retriever(self, k):
-#         if self.faiss_store is None:
-#             raise ValueError("No documents added yet")
-#         return self.faiss_store.as_retriever(search_type="similarity", search_kwargs={"k": k})
-
-
-
-
-#=============================================================================
-
-
-
 import logging
-import faiss
-import numpy as np
-from langchain.schema import Document
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
-from sentence_transformers import SentenceTransformer
+import streamlit as st
+from langchain_core.documents import Document
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
 
-# --------------------------------------------------
-# Logging Configuration
-# --------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-)
+# Note: We removed 'import faiss' and 'import numpy' because 
+# LangChain's FAISS wrapper handles them for us.
+
 logger = logging.getLogger(__name__)
 
+# This function ensures the 400MB embedding model is loaded ONLY ONCE
+@st.cache_resource
+def get_embedding_model(model_name):
+    logger.info(f"Loading embedding model: {model_name}")
+    return HuggingFaceEmbeddings(model_name=model_name)
 
 class EmbeddingStore:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        """
-        Initializes the embedding model and internal FAISS structures.
-        """
         logger.info(f"Initializing EmbeddingStore with model: {model_name}")
-
         self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
-        self.index = None
-        self.texts = []
         self.faiss_store = None
-
-        logger.info("Embedding model loaded successfully")
-
+        # We NO LONGER load SentenceTransformer here to save 50% RAM
+        
     def add_texts(self, texts: list):
-        """
-        Converts input texts into embeddings and stores them in FAISS.
-        """
         if not texts:
             logger.warning("No texts provided to add_texts()")
             return
 
-        logger.info(f"Generating embeddings for {len(texts)} texts")
-        embeddings = self.model.encode(texts)
-
-        self.texts.extend(texts)
-
-        # Create FAISS index if not exists
-        if self.index is None:
-            dim = embeddings.shape[1]
-            self.index = faiss.IndexFlatL2(dim)
-            logger.info(f"Created new FAISS index with dimension: {dim}")
-
-        self.index.add(np.array(embeddings, dtype="float32"))
-        logger.info(f"Added {len(texts)} embeddings to FAISS index")
-
-        # Wrap FAISS with LangChain retriever
-        docs = [Document(page_content=t) for t in self.texts]
-        hf_embeddings = HuggingFaceEmbeddings(model_name=self.model_name)
+        logger.info(f"Generating embeddings for {len(texts)} texts using LangChain wrapper")
+        
+        # This single line handles the model loading AND the vectorization
+        #hf_embeddings = HuggingFaceEmbeddings(model_name=self.model_name)
+        # Use the cached model instead of creating a new one
+        hf_embeddings = get_embedding_model(self.model_name)
+        
+        docs = [Document(page_content=t) for t in texts]
+        
+        # This line creates the FAISS index automatically
         self.faiss_store = FAISS.from_documents(docs, hf_embeddings)
 
-        logger.info("FAISS vector store wrapped successfully with LangChain")
+        logger.info("FAISS vector store created successfully")
 
     def as_retriever(self, k: int):
-        """
-        Returns a LangChain retriever for top-k similarity search.
-        """
         if self.faiss_store is None:
-            logger.error("Retriever requested before adding documents")
             raise ValueError("No documents added yet. Call add_texts() first.")
 
-        logger.info(f"Creating retriever with top-k = {k}")
         return self.faiss_store.as_retriever(
             search_type="similarity",
             search_kwargs={"k": k}

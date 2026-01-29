@@ -1,25 +1,3 @@
-# from transformers import pipeline
-
-# # Example toxicity checker
-# toxicity = pipeline("text-classification", model="unitary/toxic-bert")
-
-# def is_safe(text):
-#     scores = toxicity(text)
-#     for s in scores:
-#         if s['label'] == "toxic" and s['score'] > 0.5:
-#             return False
-#     return True
-
-# # Usage
-# if __name__ == "__main__":
-#     print(is_safe("I hate you!"))  # False
-#     print(is_safe("AI is amazing"))  # True
-
-
-
-#=================================================================================
-
-
 
 import logging
 from transformers import pipeline

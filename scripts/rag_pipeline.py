@@ -1,211 +1,89 @@
-# from langchain.chains import RetrievalQA
-# from langchain_community.llms import HuggingFacePipeline
-# from langchain.prompts import PromptTemplate
-# from scripts.embeddings import EmbeddingStore
-# from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
-
-
-# # Load Hugging Face LLM
-# # -------------------------
-# # Use an instruction-tuned model instead of GPT-2
-# # (much better at following "Answer concisely" instructions)
-# model_name = "google/flan-t5-base"   # You can also try flan-t5-large  
-# # model_name = "gpt2"
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-
-# # Use text2text-generation (not text-generation!)
-# text_gen = pipeline(
-#     "text2text-generation",
-#     model=model,
-#     tokenizer=tokenizer,
-#     max_new_tokens=50,   # Keep answers short
-#     temperature=0.2        # Deterministic output
-# )
-
-# llm = HuggingFacePipeline(pipeline=text_gen)
-
-# # -------------------------
-# # Load embeddings & retriever
-# # -------------------------
-# store = EmbeddingStore()
-
-# # Read entire file as a single document
-# # docs = open("data/sample.txt").read().split("\n")
-# docs = [open("data/sample.txt").read()]
-# store.add_texts(docs)
-
-
-# # Retrieve only top-1 most relevant doc
-# retriever = store.as_retriever(k=3)
-
-
-# # -------------------------
-# # Concise prompt template
-# # -------------------------
-# prompt_template = PromptTemplate(
-#     input_variables=["context", "question"],
-#     template=(
-#         # "You are a helpful assistant. "
-#         # "Answer the following question in ONE short sentence, based only on the given context. "
-#         # "If the answer is not in the context, reply: 'I don't know.'\n\n"
-#         # "Context: {context}\n\n"
-#         # "Question: {question}\n\n"
-#         # "Answer:"
-
-#         #==================================
-#         # "You are a helpful assistant. "
-#         # "Answer the following question in a **concise sentence (1-2 sentences)**, "
-#         # "using the context below. Include necessary details, like years, events, or names. "
-#         # "If the answer is not in the context, reply: 'I don't know.'\n\n"
-#         # "Context: {context}\n\n"
-#         # "Question: {question}\n\n"
-#         # "Answer:"
-
-#         #=====================================
-#         "You are a helpful assistant. "
-#         "Answer the following question **in 1-2 concise sentences**, "
-#         "using the context below. Make the answer **naturally readable** like a human-written sentence, "
-#         "even if it means slightly rephrasing the context. "
-#         "If the answer is not in the context, reply: 'I don't know.'\n\n"
-#         "Context: {context}\n\n"
-#         "Question: {question}\n\n"
-#         "Answer:"
-# # =========================================
-#         #  "You are a helpful assistant. "
-#         # "Answer the following question in 1-2 concise sentences, using the context below. "
-#         # "Whenever possible, combine names, dynasties, years, and relevant details from the context into a clear, complete answer. "
-#         # "If the answer is not in the context, reply 'I don't know.'\n\n"
-#         # "Context: {context}\n\n"
-#         # "Question: {question}\n\n"
-#         # "Answer:"
-#     )
-# )
-
-# # -------------------------
-# # RetrievalQA chain
-# # -------------------------
-# qa_chain = RetrievalQA.from_chain_type(
-#     llm=llm,
-#     retriever=retriever,
-#     chain_type="stuff",
-#     chain_type_kwargs={"prompt": prompt_template},
-#     return_source_documents=True
-# )
-# # -------------------------
-# # Debug/test mode (runs ONLY if this file is executed directly)
-# # -------------------------
-# if __name__ == "__main__":
-#     query = "What is the capital city of Odisha?"
-#     result = qa_chain(query)
-
-#     print("Answer:", result['result'])
-#     print("\nSources:")
-#     for i, doc in enumerate(result['source_documents']):
-#         print(f"Doc {i+1}: {doc.page_content[:200]}...")
-
-
-
-
-#===================================================================================
-
-
 
 import logging
-from langchain.chains import RetrievalQA
-from langchain_community.llms import HuggingFacePipeline
-from langchain.prompts import PromptTemplate
+import torch
+import streamlit as st
+
+# NEW (For 2026/Current LangChain)
+from langchain_classic.chains import RetrievalQA
+from langchain_huggingface import HuggingFacePipeline
+from langchain_community.vectorstores import FAISS
+
+from langchain_core.prompts import PromptTemplate
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 from scripts.embeddings import EmbeddingStore
 
-# --------------------------------------------------
-# Logging Configuration
-# --------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-)
 logger = logging.getLogger(__name__)
 
-logger.info("Starting RAG pipeline initialization")
-
 # --------------------------------------------------
-# Load Hugging Face LLM
+# Cached Resource Loader
 # --------------------------------------------------
-model_name = "google/flan-t5-base"
-logger.info(f"Loading LLM model: {model_name}")
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-
-text_gen = pipeline(
-    "text2text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    max_new_tokens=80,
-    temperature=0.2
-)
-
-llm = HuggingFacePipeline(pipeline=text_gen)
-logger.info("LLM loaded successfully")
-
-# --------------------------------------------------
-# Load Embeddings & Documents
-# --------------------------------------------------
-store = EmbeddingStore()
-
-logger.info("Loading documents from data/sample.txt")
-docs = [open("data/sample.txt", encoding="utf-8").read()]
-store.add_texts(docs)
-
-logger.info("Documents embedded successfully")
-
-# --------------------------------------------------
-# Retriever Configuration
-# --------------------------------------------------
-TOP_K = 3
-retriever = store.as_retriever(k=TOP_K)
-logger.info(f"Retriever created with top-k = {TOP_K}")
-
-# --------------------------------------------------
-# Prompt Template
-# --------------------------------------------------
-prompt_template = PromptTemplate(
-    input_variables=["context", "question"],
-    template=(
-        "You are a helpful assistant. "
-        "Answer the following question in 1–2 concise sentences using the context below. "
-        "Make the answer natural and human-readable. "
-        "If the answer is not in the context, reply: 'I don't know.'\n\n"
-        "Context: {context}\n\n"
-        "Question: {question}\n\n"
-        "Answer:"
+@st.cache_resource(show_spinner="Loading GenAI Models... Please wait.")
+def initialize_rag_pipeline():
+    """
+    Loads models and data once and keeps them in memory.
+    """
+    logger.info("Initializing RAG pipeline (Cached Run)")
+    
+    # 1. Load LLM with float16 to save 50% RAM (Critical for Cloud)
+    model_name = "google/flan-t5-base"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    
+    # We use torch.float16 to stay under the 1GB RAM limit
+    model = AutoModelForSeq2SeqLM.from_pretrained(
+        model_name, 
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
     )
-)
 
-logger.info("Prompt template initialized")
+    text_gen = pipeline(
+        "text2text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=80,
+        temperature=0.2
+    )
+    llm = HuggingFacePipeline(pipeline=text_gen)
 
-# --------------------------------------------------
-# RetrievalQA Chain
-# --------------------------------------------------
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    retriever=retriever,
-    chain_type="stuff",
-    chain_type_kwargs={"prompt": prompt_template},
-    return_source_documents=True
-)
+    # 2. Setup Embeddings and Documents
+    store = EmbeddingStore()
+    try:
+        with open("data/sample.txt", encoding="utf-8") as f:
+             # docs = [f.read()]
+            full_text = f.read()
+         # Split the text into manageable chunks for the 512-token limit
+        from langchain_text_splitters import CharacterTextSplitter
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        docs = text_splitter.split_text(full_text)
+          
+        store.add_texts(docs)
+    except FileNotFoundError:
+        logger.error("data/sample.txt not found! Please check your file structure.")
+        # Create a fallback so the app doesn't crash
+        store.add_texts(["Welcome to the chatbot. No data found."])
 
-logger.info("RAG QA chain created successfully")
+    retriever = store.as_retriever(k=3)
 
-# --------------------------------------------------
-# Debug / Test Mode
-# --------------------------------------------------
-if __name__ == "__main__":
-    logger.info("Running RAG pipeline in debug mode")
+    # 3. Prompt Template
+    prompt_template = PromptTemplate(
+        input_variables=["context", "question"],
+        template=(
+            "You are a helpful assistant. "
+            "Answer the question in 1–2 concise sentences using the context below. "
+            "If the answer is not in the context, say: 'I don't know.'\n\n"
+            "Context: {context}\n\n"
+            "Question: {question}\n\n"
+            "Answer:"
+        )
+    )
 
-    query = "What is the capital city of Odisha?"
-    result = qa_chain(query)
+    # 4. Create Chain
+    return RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=retriever,
+        chain_type="stuff",
+        chain_type_kwargs={"prompt": prompt_template},
+        return_source_documents=True
+    )
 
-    logger.info("Query processed successfully")
-    print("Answer:", result["result"])
+# This replaces the global code to prevent double-loading
+qa_chain = initialize_rag_pipeline()
+

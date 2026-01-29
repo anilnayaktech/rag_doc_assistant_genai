@@ -1,24 +1,3 @@
-# from transformers import AutoModelForCausalLM, AutoTokenizer
-# from peft import LoraConfig, get_peft_model, TaskType
-
-# # Example LoRA config
-# model_name = "gpt2"
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# model = AutoModelForCausalLM.from_pretrained(model_name)
-
-# config = LoraConfig(
-#     task_type=TaskType.CAUSAL_LM,
-#     inference_mode=False,
-#     r=8,
-#     lora_alpha=32,
-#     lora_dropout=0.1
-# )
-
-# lora_model = get_peft_model(model, config)
-
-
-
-#============================================================================
 
 import logging
 from transformers import AutoModelForCausalLM, AutoTokenizer

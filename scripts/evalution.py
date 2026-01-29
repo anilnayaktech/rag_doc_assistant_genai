@@ -1,16 +1,3 @@
-# from evaluate import load
-
-# rouge = load("rouge")
-# predictions = ["AI is intelligence in machines"]
-# references = ["Artificial intelligence is the simulation of human intelligence by machines"]
-
-# result = rouge.compute(predictions=predictions, references=references)
-# print(result)
-
-
-
-#===================================================
-
 
 import logging
 from evaluate import load

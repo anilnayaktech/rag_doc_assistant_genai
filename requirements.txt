@@ -1,24 +1,17 @@
-﻿streamlit
-
-# LangChain ecosystem
-langchain==0.0.352
-langchain-community==0.0.20
-langchain-core==0.1.23
-
-# Hugging Face
-transformers
-sentence-transformers
-
-# Vector DB
+﻿ #STABLE REQUIREMENTS==========================
+streamlit
+langchain-huggingface
+langchain>=1.0.0
+langchain-community>=0.3.0
+langchain-core>=0.3.0
+langchain-classic>=1.0.0 
+transformers>=4.37.0
+sentence-transformers>=2.3.0
+datasets>=2.16.0
+pyarrow<19.0.0
 faiss-cpu
-
-# ML core
-torch
-numpy
-
-# Fine-tuning / adapters
-peft
-
-# Evaluation
+torch>=2.0.0, <=2.2.0
+numpy<2.0.0 
+peft 
 evaluate
-
+rouge_score

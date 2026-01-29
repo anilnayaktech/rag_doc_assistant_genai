@@ -1,44 +1,7 @@
-# import streamlit as st
-# from scripts.rag_pipeline import qa_chain
-# from scripts.safety import is_safe
-
-# # Streamlit page setup
-# st.set_page_config(page_title="GenAI RAG Chatbot", layout="wide")
-# st.title("GenAI RAG Chatbot")
-# st.write("Ask me anything based on the documents you have!")
-
-# # User input
-# question = st.text_input("Ask me anything:")
-
-# if question:
-#     if not is_safe(question):
-#         st.error("Unsafe content detected!")
-#     else:
-#         with st.spinner("Thinking..."):
-#             # Call the RAG chain
-#             result1 = qa_chain(question)  # returns dict
-#             answer = result1['result']
-#             sources = result1['source_documents']
-
-#         # Show concise answer
-#         st.subheader("Answer")
-#         st.success(answer)  # green box for answer
-
-#         # Show source documents in collapsible sections
-#         st.subheader("Source Documents")
-#         for i, doc in enumerate(sources, 1):
-#             with st.expander(f"Document {i}"):
-#                 st.write(doc.page_content)
-
-
-
-
-
-#=========================================================================
-
 
 import logging
 import streamlit as st
+import sys
 from scripts.rag_pipeline import qa_chain
 from scripts.safety import is_safe
 
@@ -63,9 +26,18 @@ st.write("Ask questions based on the uploaded documents.")
 # --------------------------------------------------
 # User Input
 # --------------------------------------------------
-question = st.text_input("Ask me anything:")
 
-if question:
+#question = st.text_input("Ask me anything:")
+with st.form(key="chat_form", clear_on_submit=False):
+    # The text input inside the form
+    question = st.text_input("Ask me anything:", placeholder="e.g., Who built the Konark Sun Temple?")
+    
+    # The dedicated button
+    submit_button = st.form_submit_button(label="Ask Question", type="primary")
+
+# Logic triggers only when the button is clicked
+if submit_button and question:
+#if question:
     logger.info(f"User question received: {question}")
 
     if not is_safe(question):
@@ -75,7 +47,10 @@ if question:
         try:
             with st.spinner("Thinking..."):
                 logger.info("Sending question to RAG pipeline")
-                result = qa_chain(question)
+                # Ensure qa_chain is using .invoke() for 2026 LangChain standards
+                result = qa_chain.invoke(question)
+                #result = qa_chain(question)
+
 
             answer = result["result"]
             sources = result["source_documents"]
