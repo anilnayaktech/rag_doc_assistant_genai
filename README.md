@@ -50,7 +50,7 @@ rag_doc_assistant_genai/
 │   └── sample.txt           # Knowledge source
 │
 ├── app_streamlit.py         # Streamlit UI
-├── requirements.txt
+├── requirements.txt         # Dependencies
 └── README.md
 
 ```
@@ -104,7 +104,7 @@ sample.txt
 - Language: Python
 
 ## 👩‍💻 Author
-Anil Kumar Nayak
+ Anil Kumar Nayak
 
 ✨ Software Developer | Python, AI & Streamlit Enthusiast
 
