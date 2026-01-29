@@ -21,7 +21,7 @@ logger.info("Streamlit application started")
 # --------------------------------------------------
 st.set_page_config(page_title="GenAI RAG Chatbot", layout="wide")
 st.title("🤖 GenAI RAG Chatbot")
-st.write("Python version:", sys.version)
+# st.write("Python version:", sys.version)
 st.write("Ask questions based on the uploaded documents.")
 
 # --------------------------------------------------
